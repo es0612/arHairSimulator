@@ -1,25 +1,35 @@
 # 実装計画
 
-## 1. プロジェクト基盤とSPMパッケージ構造の構築
+## 1. プロジェクト基盤とXcodeGen + SPMパッケージ構造の構築
 
-- [ ] 1.1 Xcodeプロジェクトの初期セットアップを行う
-  - iOS 15以上をターゲットとしたSwiftUIプロジェクトを作成
-  - 必要なCapabilities（Camera、ARKit）を有効化
+- [ ] 1.1 XcodeGenプロジェクト設定を作成する
+  - project.ymlファイルを作成（iOS 15以上、SwiftUI設定）
+  - 必要なCapabilities（Camera、ARKit）をYAMLで定義
   - Bundle Identifierとプロジェクト設定を構成
-  - _要件: 9.1, 9.3_
+  - Firebase依存関係をpackagesセクションで定義
+  - _要件: 9.1, 9.3, プロジェクト管理効率化_
 
-- [ ] 1.2 SPMローカルパッケージ構造を作成する
+- [ ] 1.2 ビルドスクリプトとCI/CD設定を作成する
+  - generate_project.shスクリプトを作成（XcodeGen実行）
+  - setup_dependencies.shスクリプトを作成（依存関係解決）
+  - clean_build.shスクリプトを作成（クリーンビルド）
+  - .gitignoreファイルを設定（Xcodeプロジェクトファイル除外）
+  - GitHub Actions CI/CDワークフローを設定
+  - _要件: 開発効率化、チーム開発対応_
+
+- [ ] 1.3 SPMローカルパッケージ構造を作成する
   - Packages/Domain パッケージを作成（Entities + Use Cases）
   - Packages/Infrastructure パッケージを作成（ARKit、Firebase、SwiftData）
   - Packages/Presentation パッケージを作成（ViewModels、Presenters）
   - 各パッケージのPackage.swiftファイルを設定
+  - project.ymlでローカルパッケージ依存関係を定義
   - _要件: 全般的なアーキテクチャ要件_
 
-- [ ] 1.3 Swift Testingテスト環境をセットアップする
+- [ ] 1.4 Swift Testingテスト環境をセットアップする
   - 各パッケージにTestsディレクトリを作成
   - Swift Testingフレームワークを統合
-  - テスト実行用のスキームを設定
-  - CI/CD用のテスト設定を準備
+  - project.ymlでテスト実行用のスキームを設定
+  - CI/CDでのパッケージ並列テスト設定を準備
   - _要件: 開発効率とコード品質_
 
 ## 2. ドメインモデルとコアエンティティの実装（TDD）

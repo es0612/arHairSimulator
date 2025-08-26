@@ -29,31 +29,43 @@ ARヘアカラーシミュレーターは、ARKit、Vision Framework、SwiftUI�
                     └─────────────────┘
 ```
 
-### SPMローカルパッケージ構造
+### XcodeGen + SPMローカルパッケージ構造
 
 ```
 ARHairColorSimulator/
+├── project.yml                   # XcodeGen設定ファイル
 ├── App/                          # メインアプリケーション
-│   ├── Views/                    # SwiftUI Views
-│   ├── ViewModels/               # @Observable ViewModels
-│   └── ARHairColorSimulatorApp.swift
+│   ├── Sources/
+│   │   ├── Views/                # SwiftUI Views
+│   │   ├── ViewModels/           # @Observable ViewModels
+│   │   ├── Resources/            # Assets, Localizable.strings
+│   │   └── ARHairColorSimulatorApp.swift
+│   └── Info.plist
 ├── Packages/                     # ローカルSPMパッケージ
 │   ├── HairColorCore/            # コアビジネスロジック
+│   │   ├── Package.swift
 │   │   ├── Sources/
 │   │   │   ├── Models/
 │   │   │   ├── Services/
 │   │   │   └── Utilities/
 │   │   └── Tests/                # Swift Testing
 │   ├── ARProcessing/             # AR関連処理
+│   │   ├── Package.swift
 │   │   ├── Sources/
 │   │   └── Tests/
 │   ├── ColorEngine/              # 色処理エンジン
+│   │   ├── Package.swift
 │   │   ├── Sources/
 │   │   └── Tests/
 │   └── NetworkLayer/             # Firebase通信
+│       ├── Package.swift
 │       ├── Sources/
 │       └── Tests/
-└── Tests/                        # アプリレベルのUIテスト
+├── Tests/                        # アプリレベルのUIテスト
+├── Scripts/                      # ビルドスクリプト
+│   ├── generate_project.sh       # XcodeGen実行スクリプト
+│   └── setup_dependencies.sh     # 依存関係セットアップ
+└── .gitignore                    # Xcodeプロジェクトファイルを除外
 ```
 
 ### レイヤー構造
@@ -578,16 +590,20 @@ jobs:
 └─────────────────────────────────────────────────────────┘
 ```
 
-### パッケージ構造の再設計
+### XcodeGen + クリーンアーキテクチャ構造
 
 ```
 ARHairColorSimulator/
+├── project.yml                   # XcodeGen設定ファイル
 ├── App/                          # Frameworks & Drivers
-│   ├── Views/                    # SwiftUI Views
-│   ├── ViewModels/               # Interface Adapters
-│   └── Adapters/                 # External Service Adapters
+│   ├── Sources/
+│   │   ├── Views/                # SwiftUI Views
+│   │   ├── ViewModels/           # Interface Adapters
+│   │   ├── Adapters/             # External Service Adapters
+│   │   └── Resources/            # Assets, Info.plist
 ├── Packages/
 │   ├── Domain/                   # Entities + Use Cases
+│   │   ├── Package.swift
 │   │   ├── Sources/
 │   │   │   ├── Entities/         # Core Business Objects
 │   │   │   ├── UseCases/         # Application Business Rules
@@ -595,16 +611,21 @@ ARHairColorSimulator/
 │   │   │   └── Services/         # Domain Services
 │   │   └── Tests/
 │   ├── Infrastructure/           # Frameworks & Drivers
+│   │   ├── Package.swift
 │   │   ├── Sources/
 │   │   │   ├── Persistence/      # SwiftData, Firebase
 │   │   │   ├── AR/               # ARKit Implementation
 │   │   │   └── Network/          # Firebase SDK
 │   │   └── Tests/
 │   └── Presentation/             # Interface Adapters
+│       ├── Package.swift
 │       ├── Sources/
 │       │   ├── ViewModels/
 │       │   └── Presenters/
 │       └── Tests/
+└── Scripts/
+    ├── generate_project.sh       # XcodeGen + 依存関係解決
+    └── clean_build.sh            # クリーンビルドスクリプト
 ```
 
 ## t-wada流TDD戦略
@@ -876,4 +897,337 @@ struct CodeMetrics {
 }
 ```
 
-この統合された開発戦略により、高品質で保守性の高いコードベースを段階的に構築できます。
+この統合された開発戦略により、高品質で保守性の高いコードベースを段階的に構築できます。##
+ XcodeGen プロジェクト管理
+
+### XcodeGen設定ファイル (project.yml)
+
+```yaml
+name: ARHairColorSimulator
+options:
+  bundleIdPrefix: com.company.arhaircolorsimulator
+  deploymentTarget:
+    iOS: "15.0"
+  developmentLanguage: ja
+  createIntermediateGroups: true
+  
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+    ENABLE_BITCODE: false
+    SWIFT_STRICT_CONCURRENCY: complete
+    
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    majorVersion: 10.4.0
+  
+localPackages:
+  - Packages/Domain
+  - Packages/Infrastructure  
+  - Packages/Presentation
+
+targets:
+  ARHairColorSimulator:
+    type: application
+    platform: iOS
+    sources:
+      - App/Sources
+    resources:
+      - App/Resources
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: ARヘアカラーシミュレーター
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        NSCameraUsageDescription: "髪の色をリアルタイムで変更するためにカメラを使用します"
+        NSPhotoLibraryUsageDescription: "シミュレーション結果を保存するためにフォトライブラリにアクセスします"
+        UIRequiredDeviceCapabilities:
+          - arkit
+          - front-facing-camera
+        UILaunchStoryboardName: LaunchScreen
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+    dependencies:
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseFirestore
+      - package: Firebase
+        product: FirebaseStorage
+      - package: Firebase
+        product: FirebaseAnalytics
+      - target: Domain
+      - target: Infrastructure
+      - target: Presentation
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.company.arhaircolorsimulator
+        INFOPLIST_KEY_UILaunchStoryboardName: LaunchScreen
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        
+  ARHairColorSimulatorTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests
+    dependencies:
+      - target: ARHairColorSimulator
+      - package: Firebase
+        product: FirebaseAuth
+    settings:
+      base:
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/ARHairColorSimulator.app/ARHairColorSimulator
+
+  Domain:
+    type: framework
+    platform: iOS
+    sources:
+      - Packages/Domain/Sources
+    dependencies: []
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.company.arhaircolorsimulator.domain
+        
+  Infrastructure:
+    type: framework
+    platform: iOS
+    sources:
+      - Packages/Infrastructure/Sources
+    dependencies:
+      - target: Domain
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseFirestore
+      - package: Firebase
+        product: FirebaseStorage
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.company.arhaircolorsimulator.infrastructure
+        
+  Presentation:
+    type: framework
+    platform: iOS
+    sources:
+      - Packages/Presentation/Sources
+    dependencies:
+      - target: Domain
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.company.arhaircolorsimulator.presentation
+
+schemes:
+  ARHairColorSimulator:
+    build:
+      targets:
+        ARHairColorSimulator: all
+        Domain: [test]
+        Infrastructure: [test]
+        Presentation: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - ARHairColorSimulatorTests
+        - DomainTests
+        - InfrastructureTests
+        - PresentationTests
+    archive:
+      config: Release
+```
+
+### ビルドスクリプト
+
+#### generate_project.sh
+```bash
+#!/bin/bash
+
+set -e
+
+echo "🔧 Generating Xcode project with XcodeGen..."
+
+# XcodeGenがインストールされているかチェック
+if ! command -v xcodegen &> /dev/null; then
+    echo "❌ XcodeGen is not installed. Installing via Homebrew..."
+    brew install xcodegen
+fi
+
+# プロジェクトファイルを生成
+xcodegen generate
+
+# Firebase設定ファイルの存在確認
+if [ ! -f "App/Resources/GoogleService-Info.plist" ]; then
+    echo "⚠️  Warning: GoogleService-Info.plist not found in App/Resources/"
+    echo "   Please download it from Firebase Console and place it in App/Resources/"
+fi
+
+echo "✅ Xcode project generated successfully!"
+echo "   Open ARHairColorSimulator.xcodeproj to start development"
+```
+
+#### setup_dependencies.sh
+```bash
+#!/bin/bash
+
+set -e
+
+echo "📦 Setting up project dependencies..."
+
+# Swift Package Managerの依存関係を解決
+echo "Resolving Swift Package Manager dependencies..."
+xcodebuild -resolvePackageDependencies -project ARHairColorSimulator.xcodeproj -scheme ARHairColorSimulator
+
+# ローカルパッケージのテストを実行
+echo "Running local package tests..."
+for package in Domain Infrastructure Presentation; do
+    echo "Testing $package package..."
+    cd "Packages/$package"
+    swift test
+    cd "../.."
+done
+
+echo "✅ Dependencies setup completed!"
+```
+
+#### clean_build.sh
+```bash
+#!/bin/bash
+
+set -e
+
+echo "🧹 Cleaning build artifacts..."
+
+# Xcodeプロジェクトファイルを削除（再生成のため）
+rm -rf ARHairColorSimulator.xcodeproj
+rm -rf ARHairColorSimulator.xcworkspace
+
+# DerivedDataをクリーン
+rm -rf ~/Library/Developer/Xcode/DerivedData/ARHairColorSimulator-*
+
+# Swift Package Managerキャッシュをクリーン
+rm -rf .build
+for package in Packages/*/; do
+    if [ -d "$package.build" ]; then
+        rm -rf "$package.build"
+    fi
+done
+
+echo "🔧 Regenerating project..."
+./Scripts/generate_project.sh
+
+echo "✅ Clean build setup completed!"
+```
+
+### .gitignore 設定
+
+```gitignore
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+*.xcuserdata/
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+Packages/*/build/
+
+# Firebase
+GoogleService-Info.plist
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+```
+
+### 開発ワークフロー
+
+#### 1. 初期セットアップ
+```bash
+# リポジトリをクローン
+git clone <repository-url>
+cd ARHairColorSimulator
+
+# プロジェクトを生成
+./Scripts/generate_project.sh
+
+# 依存関係をセットアップ
+./Scripts/setup_dependencies.sh
+```
+
+#### 2. 日常的な開発
+```bash
+# プロジェクト設定を変更した場合
+./Scripts/generate_project.sh
+
+# クリーンビルドが必要な場合
+./Scripts/clean_build.sh
+
+# パッケージテストのみ実行
+cd Packages/Domain && swift test
+cd Packages/Infrastructure && swift test
+cd Packages/Presentation && swift test
+```
+
+#### 3. CI/CD統合
+```yaml
+# .github/workflows/build.yml
+name: Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install XcodeGen
+      run: brew install xcodegen
+      
+    - name: Generate Xcode Project
+      run: ./Scripts/generate_project.sh
+      
+    - name: Run Package Tests
+      run: |
+        cd Packages/Domain && swift test
+        cd ../Infrastructure && swift test  
+        cd ../Presentation && swift test
+        
+    - name: Build App
+      run: |
+        xcodebuild -project ARHairColorSimulator.xcodeproj \
+                   -scheme ARHairColorSimulator \
+                   -destination 'platform=iOS Simulator,name=iPhone 14' \
+                   build
+```
+
+### XcodeGenの利点
+
+1. **バージョン管理**: プロジェクト設定がYAMLファイルで管理される
+2. **チーム開発**: マージコンフリクトの大幅な削減
+3. **自動化**: CI/CDでのプロジェクト生成が可能
+4. **一貫性**: 設定の標準化と再現性
+5. **保守性**: 設定変更が追跡可能で理解しやすい
+
+この構成により、プロジェクト管理が大幅に改善され、チーム開発での効率性が向上します。
