@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Auto Format Code",
+  "description": "Automatically formats Swift code files after they are edited to maintain consistent coding standards",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.swift"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A Swift code file has been modified. Please format the code to ensure it follows proper Swift formatting conventions including proper indentation, spacing, and line breaks. Make sure the code is clean and readable while preserving all functionality."
+  }
+}
